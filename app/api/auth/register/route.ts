@@ -1,15 +1,26 @@
+import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { email, password, name } = await req.json();
+    const { email, password, username } = await request.json();
 
-    if (!email || !password) {
-      return Response.json(
-        { error: "Email and password are required" },
+    // Validation
+    if (!email || !password || !username) {
+      return NextResponse.json(
+        { error: "Email, username and password are required" },
+        { status: 400 }
+      );
+    }
+
+    if (password.length < 6) {
+      return NextResponse.json(
+        { error: "Password must be at least 6 characters" },
         { status: 400 }
       );
     }
@@ -20,7 +31,7 @@ export async function POST(req: Request) {
     });
 
     if (existingUser) {
-      return Response.json(
+      return NextResponse.json(
         { error: "Email already registered" },
         { status: 400 }
       );
@@ -33,27 +44,48 @@ export async function POST(req: Request) {
     const user = await prisma.user.create({
       data: {
         email,
-        name: name || null,
+        username,
         passwordHash,
+        role: "CASHIER",
       },
     });
 
-    return Response.json(
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Create response
+    const response = NextResponse.json(
       {
         message: "User registered successfully",
         user: {
           id: user.id,
           email: user.email,
-          name: user.name,
+          username: user.username,
         },
       },
       { status: 201 }
     );
+
+    // Set token cookie
+    response.cookies.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+
+    return response;
   } catch (error) {
     console.error("Register error:", error);
-    return Response.json(
+    return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
     );
+  } finally {
+    await prisma.$disconnect();
   }
 }

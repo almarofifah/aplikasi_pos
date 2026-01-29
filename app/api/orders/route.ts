@@ -11,7 +11,7 @@ export async function GET(req: Request) {
           select: {
             id: true,
             email: true,
-            name: true,
+            username: true,
           },
         },
         orderItems: {
@@ -35,33 +35,43 @@ export async function GET(req: Request) {
 // POST - Buat order baru
 export async function POST(req: Request) {
   try {
-    const { userId, items, total } = await req.json();
+    const body = await req.json();
+    const { userId, items, total, customerName, paymentMethod, orderNotes, diningMode, tableNo } = body;
 
-    if (!userId || !items || items.length === 0) {
-      return Response.json(
-        { error: "userId and items are required" },
-        { status: 400 }
-      );
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      return Response.json({ error: "items are required" }, { status: 400 });
     }
 
-    // Verify user exists
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
+    // Find or create a user to attach the order to
+    let user = null;
+    if (userId) {
+      user = await prisma.user.findUnique({ where: { id: userId } });
+    }
     if (!user) {
-      return Response.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
+      user = await prisma.user.findFirst();
+      if (!user) {
+        // create a system user
+        user = await prisma.user.create({
+          data: {
+            email: 'system@local',
+            username: 'system',
+            passwordHash: 'system',
+            role: 'CASHIER',
+          },
+        });
+      }
     }
 
-    // Create order with items
+    // Compute server-side total from items
+    const itemsTotal = items.reduce((s: number, it: any) => s + (it.price || 0) * (it.quantity || 0), 0);
+    const finalTotal = typeof total === 'number' && total === itemsTotal ? total : itemsTotal;
+
+    // Create order with status COMPLETED
     const order = await prisma.order.create({
       data: {
-        userId,
-        total: total || 0,
-        status: "PENDING",
+        userId: user.id,
+        total: finalTotal,
+        status: 'COMPLETED',
         orderItems: {
           create: items.map((item: any) => ({
             productId: item.productId,
@@ -71,33 +81,16 @@ export async function POST(req: Request) {
         },
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-          },
-        },
-        orderItems: {
-          include: {
-            product: true,
-          },
-        },
+        user: { select: { id: true, email: true, username: true } },
+        orderItems: { include: { product: true } },
       },
     });
 
-    return Response.json(
-      {
-        message: "Order created successfully",
-        order,
-      },
-      { status: 201 }
-    );
+    console.log('Order created:', order.id, 'total:', order.total);
+
+    return Response.json({ message: 'Order created successfully', order }, { status: 201 });
   } catch (error) {
-    console.error("Create order error:", error);
-    return Response.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error('Create order error:', error);
+    return Response.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

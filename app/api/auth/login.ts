@@ -9,9 +9,9 @@ const prisma = new PrismaClient();
 
 
 export async function POST(req: Request) {
-  const { email, password } = await req.json()
+  const { username, password } = await req.json()
 
-  const user = await prisma.user.findUnique({ where: { email } })
+  const user = await prisma.user.findUnique({ where: { username } })
 
   if (!user) {
     return Response.json({ error: 'Invalid credentials' }, { status: 401 })
@@ -52,9 +52,8 @@ export async function POST(req: Request) {
   return Response.json({
     message: 'Login successful',
     user: {
-      email: user.email,
+      username: user.username,
       role: user.role
     }
   })
 }
-pht-ycqm-xry
