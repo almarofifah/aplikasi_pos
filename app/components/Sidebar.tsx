@@ -6,17 +6,34 @@ import { usePathname } from "next/navigation";
 import { useSidebar } from "./SidebarContext";
 import { UtensilsCrossed, LayoutDashboard, Package, Settings, LogOut, Menu, X } from "lucide-react";
 
-const menuItems = [
-  { label: "Kasir", path: "/kasir", icon: UtensilsCrossed },
-  { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
-  { label: "Produk", path: "/admin/products", icon: Package },
-  { label: "Kategori", path: "/admin/categories", icon: Settings },
-  { label: "Settings", path: "/settings", icon: Settings },
-];
-
 export default function Sidebar() {
   const { sidebarOpen, setSidebarOpen, toggleSidebar } = useSidebar();
   const pathname = usePathname();
+
+  const [role, setRole] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/users/me');
+        if (!res.ok) return;
+        const body = await res.json();
+        setRole(body.user?.role || null);
+      } catch (err) {
+        console.error('Failed to fetch current user role for sidebar', err);
+      }
+    })();
+  }, []);
+
+  const menuItems = [
+    { label: "Kasir", path: "/kasir", icon: UtensilsCrossed },
+    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { label: "Produk", path: "/admin/products", icon: Package },
+    { label: "Kategori", path: "/admin/categories", icon: Settings },
+    // show Users only for ADMIN
+    ...(role === 'ADMIN' ? [{ label: 'Users', path: '/admin/users', icon: Settings }] : []),
+    { label: "Settings", path: "/settings", icon: Settings },
+  ];
 
   return (
     <aside
