@@ -30,9 +30,11 @@ type Order = {
   queue?: number;
   customerName?: string | null;
   orderItems?: OrderItem[];
-  total?: number;
+  total?: number | 0;
+  status?: string;
   createdAt: string;
   paymentMethod?: string | null;
+  userId?: string;
 };
 
 export default function DashboardPage() {
