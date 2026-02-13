@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 type SidebarContextValue = {
@@ -12,19 +12,26 @@ type SidebarContextValue = {
 const SidebarContext = createContext<SidebarContextValue | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
-  const getInitial = () => {
+  // Start closed on server to avoid hydration mismatch. After mount we will read
+  // the user's preference or window size and update accordingly.
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+
+  // Sync initial value on client after mount (reads localStorage/window).
+  useEffect(() => {
     try {
       const stored = localStorage.getItem("sidebarOpen");
-      if (stored !== null) return stored === "true";
+      if (stored !== null) {
+        setSidebarOpen(stored === "true");
+        return;
+      }
+      // fallback to screen width on first load
+      if (typeof window !== "undefined") {
+        setSidebarOpen(window.innerWidth >= 768);
+      }
     } catch {
       // ignore
     }
-    // default closed on small screens
-    if (typeof window !== "undefined") return window.innerWidth >= 768;
-    return true;
-  };
-
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => getInitial());
+  }, []);
   const pathname = usePathname();
 
   // Persist
@@ -36,14 +43,16 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     }
   }, [sidebarOpen]);
 
+  const prevPathRef = useRef<string | null>(null);
+
   // Close when route changes (only if it is open)
   useEffect(() => {
-    if (pathname && sidebarOpen) {
+    if (pathname && prevPathRef.current !== null && prevPathRef.current !== pathname && sidebarOpen) {
       // delay to avoid synchronous state update during render lifecycle
       const t = setTimeout(() => setSidebarOpen(false));
       return () => clearTimeout(t);
     }
-    return;
+    prevPathRef.current = pathname;
   }, [pathname, sidebarOpen]);
 
   const toggleSidebar = () => setSidebarOpen((s) => !s);

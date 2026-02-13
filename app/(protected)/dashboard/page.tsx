@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TrendingUp, ShoppingCart, Package, Bell, Plus } from "lucide-react";
+import { useUser } from "../../components/UserContext";
 
 // Types
 type Product = {
@@ -35,6 +36,7 @@ type Order = {
 };
 
 export default function DashboardPage() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -158,19 +160,16 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-3">
           <div className="relative">
-            <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">JD</div>
-            <input id="dashboard-profile-upload" type="file" accept="image/*" onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                const result = reader.result as string;
-                localStorage.setItem('profileImage', result);
-                location.reload();
-              };
-              reader.readAsDataURL(file);
-            }} className="hidden" />
-            <label htmlFor="dashboard-profile-upload" className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow cursor-pointer text-xs">+</label>
+            {user?.profileImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.profileImage} alt="profile" className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">{(user?.username?.charAt(0) || 'JD').toUpperCase()}</div>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-semibold">{user?.username || 'John'}</p>
+            <p className="text-xs text-gray-500">{user?.role || 'User'}</p>
           </div>
         </div>
 

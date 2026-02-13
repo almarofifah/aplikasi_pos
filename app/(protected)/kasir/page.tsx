@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useUser } from "../../components/UserContext";
 import { Plus, Minus, Trash2, Search, UtensilsCrossed, Coffee, IceCream } from "lucide-react";
 
 type Product = {
@@ -35,7 +36,8 @@ export default function KasirPage() {
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState("");
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  // profile handled by global user context
+  const { user } = useUser();
   const [diningMode, setDiningMode] = useState<'DINE_IN'|'TAKE_AWAY'>('DINE_IN');
   const [tableNo, setTableNo] = useState("");
   const [orderNotes, setOrderNotes] = useState("");
@@ -55,6 +57,14 @@ export default function KasirPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'CASH'|'CARD'|'EWALLET'>('CASH');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // auto-dismiss notice after a few seconds
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   const [lastQueue, setLastQueue] = useState<number>(() => {
     try { return parseInt(localStorage.getItem('lastQueue') || '0', 10) || 0 } catch { return 0 }
@@ -86,27 +96,7 @@ export default function KasirPage() {
 
   // local initializers already loaded queue/orders synchronously; no extra effect needed
 
-  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const result = reader.result as string;
-      setProfileImage(result);
 
-      // persist to server
-      try {
-        await fetch('/api/users/me', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ profileImage: result }),
-        });
-      } catch (err) {
-        console.error('Failed to save profile image:', err);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
 
   useEffect(() => {
     fetch("/api/products")
@@ -115,18 +105,7 @@ export default function KasirPage() {
         setProducts(data);
       });
 
-    // fetch current user profile image
-    (async () => {
-      try {
-        const res = await fetch('/api/users/me');
-        if (!res.ok) return;
-        const body = await res.json();
-        const img = body?.user?.profileImage;
-        if (img) setProfileImage(img);
-      } catch (err) {
-        console.error('Failed to fetch user profile', err);
-      }
-    })();
+    // profile is provided by UserContext; no direct upload here (Settings handles changes)
   }, []);
 
   // filteredProducts derived using useMemo (no setState in effects)
@@ -183,7 +162,8 @@ export default function KasirPage() {
   const initiatePayment = () => {
     if (cart.length === 0) return;
     if (diningMode === 'DINE_IN' && tableNo === '') {
-      alert('Please select a table number before paying.');
+      // show inline warning instead of blocking alert
+      setShowCancelConfirm(true);
       return;
     }
     setShowPayment(true);
@@ -214,13 +194,14 @@ export default function KasirPage() {
       const data = await res.json();
       if (!res.ok) {
         console.error('Order creation failed', data);
-        alert(data.error || 'Failed to create order');
+        setNotice({ type: 'error', text: data?.error || 'Failed to create order' });
         setShowPayment(false);
         return;
       }
 
       const created = data.order;
       console.log('Order created on server:', created);
+      setNotice({ type: 'success', text: 'Order berhasil dibuat' });
 
       // keep a local copy as well for quick access
       const nextQueue = lastQueue + 1;
@@ -236,7 +217,7 @@ export default function KasirPage() {
         paymentMethod,
         orderNotes,
         createdAt: created.createdAt || new Date().toISOString(),
-        profileImage,
+        profileImage: user?.profileImage || null,
       };
 
       const newOrders = [orderForReceipt, ...orders];
@@ -263,6 +244,8 @@ export default function KasirPage() {
   };
 
   const printReceipt = (order: { id?: string; queue?: number; customerName?: string; items?: CartItem[]; total?: number }) => {
+    // ensure notice clears before opening print view
+    setTimeout(() => setNotice(null), 1500);
     const w = window.open('', '_blank', 'width=400,height=600');
     if (!w) return;
 
@@ -288,6 +271,11 @@ export default function KasirPage() {
   return (
     <main className="min-h-screen bg-gray-50">
       <div className="flex gap-6 p-6">
+        {notice && (
+          <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-50 p-3 rounded ${notice.type === 'success' ? 'bg-green-50 text-green-800 border border-green-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+            {notice.text}
+          </div>
+        )}
         {/* Main Content */}
         <div className="flex-1">
           {/* Header */}
@@ -298,18 +286,17 @@ export default function KasirPage() {
 
             <div className="flex items-center gap-3">
               <div className="relative">
-                {profileImage ? (
-                  <img src={profileImage} alt="profile" className="w-10 h-10 rounded-full object-cover" />
+                {user?.profileImage ? (
+                  <img src={user.profileImage} alt="profile" className="w-10 h-10 rounded-full object-cover" />
                 ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">JD</div>
+                  <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">{(user?.username?.charAt(0) || 'JD').toUpperCase()}</div>
                 )}
-                <input id="profile-upload" type="file" accept="image/*" onChange={handleProfileUpload} className="hidden" />
-                <label htmlFor="profile-upload" className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow cursor-pointer text-xs">+</label>
+
               </div>
 
               <div className="text-right">
-                <p className="text-sm text-gray-900 text-left font-semibold">John</p>
-                <p className="text-xs text-gray-500">Cashier</p>
+                <p className="text-sm text-gray-900 text-left font-semibold">{user?.username || 'John'}</p>
+                <p className="text-xs text-gray-500">{user?.role || 'Cashier'}</p>
               </div>
             </div>
           </div>

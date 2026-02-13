@@ -1,8 +1,7 @@
 "use client";
 
-import { SidebarProvider } from "../components/SidebarContext";
-import Sidebar from "../components/Sidebar";
-import { useSidebar } from "../components/SidebarContext";
+import { SidebarProvider, useSidebar } from "../../components/SidebarContext";
+import Sidebar from "../../components/Sidebar";
 
 function AdminShell({ children }: { children: React.ReactNode }) {
   const { sidebarOpen } = useSidebar();

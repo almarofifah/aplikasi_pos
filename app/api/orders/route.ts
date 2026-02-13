@@ -62,9 +62,21 @@ export async function POST(req: Request) {
       }
     }
 
-    // Compute server-side total from items
-    const itemsTotal = items.reduce((s: number, it: any) => s + (it.price || 0) * (it.quantity || 0), 0);
-    const finalTotal = typeof total === 'number' && total === itemsTotal ? total : itemsTotal;
+    // Validate items and compute server-side total
+    let itemsTotal = 0;
+    for (const it of items) {
+      if (!it.productId) return Response.json({ error: 'productId is required for each item' }, { status: 400 });
+      const p = await prisma.product.findUnique({ where: { id: it.productId } });
+      if (!p) return Response.json({ error: `Invalid productId: ${it.productId}` }, { status: 400 });
+      if (typeof it.quantity !== 'number' || it.quantity <= 0) return Response.json({ error: 'Invalid quantity' }, { status: 400 });
+      itemsTotal += (it.price || 0) * it.quantity;
+    }
+
+    const TAX_RATE = 0.1;
+    const PACKAGING_FEE = 2000;
+    const tax = Math.round(itemsTotal * TAX_RATE);
+    const packaging = diningMode === 'TAKE_AWAY' ? PACKAGING_FEE : 0;
+    const finalTotal = itemsTotal + tax + packaging;
 
     // Create order with status COMPLETED
     const order = await prisma.order.create({
@@ -88,9 +100,11 @@ export async function POST(req: Request) {
 
     console.log('Order created:', order.id, 'total:', order.total);
 
-    return Response.json({ message: 'Order created successfully', order }, { status: 201 });
+    // Return order plus computed breakdown so client can show receipt breakdown
+    return Response.json({ message: 'Order created successfully', order: { ...order, tax, packaging, diningMode, customerName, paymentMethod, orderNotes } }, { status: 201 });
   } catch (error) {
     console.error('Create order error:', error);
-    return Response.json({ error: 'Internal server error' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : 'Internal server error';
+    return Response.json({ error: msg }, { status: 500 });
   }
 }

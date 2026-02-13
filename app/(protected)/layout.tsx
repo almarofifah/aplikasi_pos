@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SidebarProvider } from "../components/SidebarContext";
 import Sidebar from "../components/Sidebar";
 import { useSidebar } from "../components/SidebarContext";
+import { UserProvider } from "../components/UserContext";
 
 function ProtectedShell({ children }: { children: React.ReactNode }) {
   // inside provider so we can use the hook
@@ -26,20 +27,24 @@ export default function ProtectedLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Check if token exists, if not redirect to login
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("token="))
-      ?.split("=")[1];
-
-    if (!token) {
-      router.push("/login");
-    }
+    // Verify auth by calling the user endpoint. If unauthorized, redirect to login.
+    (async () => {
+      try {
+        const res = await fetch('/api/users/me');
+        if (!res.ok) {
+          router.push('/login');
+        }
+      } catch (err) {
+        router.push('/login');
+      }
+    })();
   }, [router]);
 
   return (
     <SidebarProvider>
-      <ProtectedShell>{children}</ProtectedShell>
+      <UserProvider>
+        <ProtectedShell>{children}</ProtectedShell>
+      </UserProvider>
     </SidebarProvider>
   );
 }

@@ -58,7 +58,7 @@ export default function RegisterPage() {
       {/* OVERLAY */}
       <div className="absolute inset-0 bg-black/20"></div>
 
-      FORM CARD
+      {/* FORM CARD */}
       <div className="relative w-full max-w-md mx-auto">
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
 
