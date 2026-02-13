@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+/*import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -107,4 +107,4 @@ export async function POST(req: Request) {
     const msg = error instanceof Error ? error.message : 'Internal server error';
     return Response.json({ error: msg }, { status: 500 });
   }
-}
+}*/
