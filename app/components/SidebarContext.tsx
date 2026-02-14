@@ -14,24 +14,18 @@ const SidebarContext = createContext<SidebarContextValue | undefined>(undefined)
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
   // Start closed on server to avoid hydration mismatch. After mount we will read
   // the user's preference or window size and update accordingly.
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-
-  // Sync initial value on client after mount (reads localStorage/window).
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("sidebarOpen");
-      if (stored !== null) {
-        setSidebarOpen(stored === "true");
-        return;
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("sidebarOpen");
+        if (stored !== null) return stored === "true";
+        return window.innerWidth >= 768;
+      } catch {
+        return false;
       }
-      // fallback to screen width on first load
-      if (typeof window !== "undefined") {
-        setSidebarOpen(window.innerWidth >= 768);
-      }
-    } catch {
-      // ignore
     }
-  }, []);
+    return false;
+  });
   const pathname = usePathname();
 
   // Persist
