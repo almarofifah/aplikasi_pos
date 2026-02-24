@@ -4,13 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TrendingUp, ShoppingCart, Package, Bell, Plus } from "lucide-react";
 import { useUser } from "../../components/UserContext";
-import type { Product } from '@prisma/client'
 
+
+type ProductDTO = {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  isActive: boolean;
+};
 // Types
 type OrderItem = {
   id?: string;
   productId?: string;
-  product?: Product | null;
+   product?: ProductDTO | null;
   name?: string;
   quantity: number;
   price: number;
@@ -32,7 +39,7 @@ export default function DashboardPage() {
   const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductDTO[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [stats, setStats] = useState({
@@ -42,9 +49,10 @@ export default function DashboardPage() {
   });
 
   const [activities, setActivities] = useState<Order[]>([]);
-  const [topProducts, setTopProducts] = useState<{ product: Product; qty: number; revenue: number }[]>([]);
+  const [topProducts, setTopProducts] =
+    useState<{ product: ProductDTO; qty: number; revenue: number }[]>([]);
   const [salesSeries, setSalesSeries] = useState<number[]>([]);
-  const [lowStock, setLowStock] = useState<Product[]>([]);
+  const [lowStock, setLowStock] = useState<ProductDTO[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,7 +68,7 @@ export default function DashboardPage() {
         if (!productsRes.ok) throw new Error("Failed to fetch products");
 
         const ordersData: Order[] = await ordersRes.json();
-        const productsData: Product[] = await productsRes.json();
+        const productsData: ProductDTO[] = await productsRes.json();
 
         setOrders(ordersData);
         setProducts(productsData);
@@ -79,15 +87,29 @@ export default function DashboardPage() {
         setActivities(latest);
 
         // Top products by quantity sold
-        const map: Record<string, { product: Product; qty: number; revenue: number }> = {};
+        const map: Record<string, { product: ProductDTO; qty: number; revenue: number }> = {};
         ordersData.forEach((o: Order) => {
           (o.orderItems || []).forEach((it: OrderItem) => {
             const pid = it.product?.id || it.productId || 'unknown';
-            if (!map[pid]) map[pid] = { product: (it.product as Product) || { id: pid, name: it.name || "Unknown", price: it.price, stock: 0 }, qty: 0, revenue: 0 };
+            if (!map[pid]) {
+              map[pid] = {
+                product: it.product ?? {
+                  id: pid,
+                  name: it.name || "Unknown",
+                  price: it.price,
+                  stock: 0,
+                  isActive: false,
+                },
+                qty: 0,
+                revenue: 0,
+              };
+            }
+
             map[pid].qty += it.quantity;
             map[pid].revenue += it.quantity * it.price;
           });
         });
+
         const tops = Object.values(map).sort((a, b) => b.qty - a.qty).slice(0, 6);
         setTopProducts(tops);
 
@@ -108,7 +130,7 @@ export default function DashboardPage() {
         setSalesSeries(Object.values(days));
 
         // Low stock (threshold 5)
-        const low = productsData.filter((p: Product) => typeof p.stock === 'number' && (p.stock || 0) <= 5);
+        const low = productsData.filter((p: ProductDTO) => typeof p.stock === 'number' && (p.stock || 0) <= 5);
         setLowStock(low);
 
       } catch (err) {
@@ -205,10 +227,10 @@ export default function DashboardPage() {
       {/* Actions & Alerts */}
       <div className="flex items-center gap-4 mt-6">
         <Link href="/kasir" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">
-          <ShoppingCart size={16}/> New Transaction
+          <ShoppingCart size={16} /> New Transaction
         </Link>
         <Link href="/admin/products" className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium">
-          <Plus size={14}/> Add Product
+          <Plus size={14} /> Add Product
         </Link>
 
         <div className="ml-auto flex items-center gap-3">
