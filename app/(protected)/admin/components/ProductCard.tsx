@@ -1,16 +1,7 @@
 "use client";
 
 import { Pencil, Trash2 } from "lucide-react";
-
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  stock: number;
-  category: string;
-  imageUrl?: string;
-}
+import { Product } from "@prisma/client";
 
 interface ProductCardProps {
   product: Product;

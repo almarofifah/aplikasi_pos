@@ -4,17 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, AlertCircle } from "lucide-react";
 import ProductForm, { ProductFormData } from "../components/ProductForm";
 import ProductCard from "../components/ProductCard";
-
-type Product = {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  stock: number;
-  category: string;
-  imageUrl?: string;
-  isActive: boolean;
-};
+import { Product } from "@prisma/client";
 
 export default function ProductsAdminPage() {
   const [products, setProducts] = useState<Product[]>([]);

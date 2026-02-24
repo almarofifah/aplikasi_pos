@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 model User {
@@ -61,13 +61,12 @@ model OrderItem {
   id        String   @id @default(cuid())
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+
   productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  
+  product   Product  @relation(fields: [productId], references: [id],onDelete: Cascade)
+
   quantity  Int
-  price     Int      // Harga saat order dibuat
-  
+  price     Int
   createdAt DateTime @default(now())
 
   @@unique([orderId, productId])

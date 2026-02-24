@@ -4,18 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TrendingUp, ShoppingCart, Package, Bell, Plus } from "lucide-react";
 import { useUser } from "../../components/UserContext";
+import type { Product } from '@prisma/client'
 
 // Types
-type Product = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price: number;
-  stock?: number | null;
-  category?: string | null;
-  imageUrl?: string | null;
-};
-
 type OrderItem = {
   id?: string;
   productId?: string;
