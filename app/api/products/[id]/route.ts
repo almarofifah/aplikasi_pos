@@ -5,10 +5,10 @@ const prisma = new PrismaClient();
 // GET - Dapatkan produk berdasarkan ID
 export async function GET(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -34,10 +34,10 @@ export async function GET(
 // PUT - Update produk
 export async function PUT(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { name, description, price, stock, category, imageUrl, isActive } =
       await req.json();
 
@@ -73,10 +73,10 @@ export async function PUT(
 // DELETE - Hapus produk
 export async function DELETE(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
 
     await prisma.product.delete({
       where: { id },

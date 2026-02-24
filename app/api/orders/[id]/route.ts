@@ -6,10 +6,10 @@ const prisma = new PrismaClient();
 // GET - Get order by ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
 
     const order = await prisma.order.findUnique({
       where: { id },
@@ -46,10 +46,10 @@ export async function GET(
 // PUT - Update order
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
     const { status, total } = await req.json();
 
     const order = await prisma.order.update({
@@ -90,10 +90,10 @@ export async function PUT(
 // DELETE - Delete order
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const { id } = params;
 
     await prisma.order.delete({
       where: { id },

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 const prisma = new PrismaClient();
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get("auth_token")?.value;
@@ -13,7 +13,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const payload = verifyJwt<{ userId: string; role: string }>(token);
     if (payload.role !== "ADMIN") return Response.json({ error: "Forbidden" }, { status: 403 });
 
-    const { id } = await params;
+    const { id } = params;
     const body = await req.json();
     const { role } = body;
     if (!role) return Response.json({ error: "role required" }, { status: 400 });
